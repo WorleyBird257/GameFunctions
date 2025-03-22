@@ -41,6 +41,8 @@ def purchase_item(itemPrice, startingMoney, quantityToPurchase):
     return purchasedQuantity, remaining_money
 
 ##################################################################
+def random_stat(min_val, max_val):
+    return random.randint(min_val, max_val)
 
 def new_random_monster(monster_name=None): 
     '''
@@ -57,11 +59,11 @@ def new_random_monster(monster_name=None):
     '''
     
     monster_values_dict = { #first dictionary holds name and values for "stats"
-        'Goblin': {'health': random.randint(140, 160), 'power': random.randint(15, 30), 'money': random.randint(1, 10)},
-        'Draugr': {'health': random.randint(140, 175), 'power': random.randint(15, 25), 'money': random.randint(1, 15)},
-        'Bat': {'health': random.randint(50, 80), 'power': random.randint(10, 25), 'money': random.randint(1, 7)},
-        'Wolf': {'health': random.randint(150, 180), 'power': random.randint(15, 20), 'money': random.randint(5, 15)},
-        'Skeleton': {'health': random.randint(160, 200), 'power': random.randint(20, 40), 'money': random.randint(10, 25)}
+        'Goblin': {'health': random_stat(140, 160), 'power': random_stat(15, 30), 'money': random_stat(1, 10)},
+        'Draugr': {'health': random_stat(140, 175), 'power': random_stat(15, 25), 'money': random_stat(1, 15)},
+        'Bat': {'health': random_stat(50, 80), 'power': random_stat(10, 25), 'money': random_stat(1, 7)},
+        'Wolf': {'health': random_stat(150, 180), 'power': random_stat(15, 20), 'money': random_stat(5, 15)},
+        'Skeleton': {'health': random_stat(160, 200), 'power': random_stat(20, 40), 'money': random_stat(10, 25)}
     }
 
     monster_description_dict = { #second dictionary holds monster name with description. Ties the two together
@@ -135,6 +137,7 @@ def print_shop_menu(item1Name='Potion', item1Price=50, item2Name='Elixir', item2
     print('|' + ' ' * 18 + '|')
     print('|' + '_' * 18 + '|')
     
+
 # Insane debugging. still doesn't work for price values of 5 index. 
     #print(len((' ' + '_' * 18 + ' ')))
     #print(len(('|' + '*' + ' ' * 16 + '*' + '|')))
@@ -146,6 +149,7 @@ def print_shop_menu(item1Name='Potion', item1Price=50, item2Name='Elixir', item2
     #print(item1PriceWidth)
     #print(item2PriceWidth)
     #print(priceWidthBuffer)
+    
           
 item1Name = str()
 item1Price = float()
@@ -172,7 +176,7 @@ if __name__ in '__main__': #purchase_item
         print(monster1)
         print(monster2)
 
-        print(print_welcome()) #4 #welcome, with different names
+        print(print_welcome()) #welcome, with different length of name (#4)
         print(print_welcome(name='Gerald')) #6
         print(print_welcome('Guinnivere')) #10
 
