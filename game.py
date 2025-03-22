@@ -1,52 +1,73 @@
-import gameFunctions, random
+'''Opens the Adventure Game. Draws from functions in gameFunctions module.
+Includes combat loop. '''
 
-def choose_function(): #presents options for user inputs to call specifc fxn
-    print('Select a function from list:')
-    print('1. Purchase Item')
-    print('2. Random Monster')
-    print('3. Welcome')
-    print('4. Shop Menu')
+import gameFunctions, random, gameCombatLoop
 
-    option = input('Enter 1 - 4\n')
+user_HP = 50
+GP = 30
 
-    if option == '1':
-        print('Purchase Item')
-        price = float(input('Item Price:\n'))
-        money = float(input('Starting Money:\n'))
-        quantity = int(input('Number to Purchase:\n'))
+def town_splash(): 
+    '''
+    Small 'splash' intro to the game!
+
+    Parameters:
+        User input name
+        print_welcome function.
         
-        result = gameFunctions.purchase_item(price, money, quantity)
-        print(result)
+    Returns:
+        None
+    '''
     
-    elif option == '2':
-        print('Random Monster')
-        print('Choose a Monster: Goblin, Draugr, Bat, Wolf, Skeleton')
-        monster = input()
-        
-        result = gameFunctions.new_random_monster(monster)
-        print(result) #clean up output and dictionaries
-    
-    elif option == '3':
-        print('Welcome')
-        name = input('Please type your name:\n')
-        
-        result = gameFunctions.print_welcome(name)
-        print(result)
-    
-    elif option == '4':
-        print('Shop Menu')
-        name1 = input('Input 1st item in shop:\n')
-        price1 = float(input('Input price of 1st item:\n'))
-        name2 = input('Input 2nd item in shop:\n')
-        price2 = float(input('Input price of 2nd item:\n'))
+    print('You are in town.')
+    print(f'Current HP: {user_HP}, Current Gold: {GP}')
+    print('\nWhat would you like to do?\n')
 
-        result = gameFunctions.print_shop_menu(name1, price1, name2, price2)
-        print(result) #ehhhhh
-    else:
-        print('Choose a number between 1 and 4')
+def get_valid_input():
+    '''
+    Validates users input to ensure the game's menu only operates with particular text.
+    '''
+    first_prompt = True
+    while True:
+        if first_prompt:
+            user_input = input("\nSelect a number (1-3): \n").strip()
+            first_prompt = False
+        else:
+            user_input = input("That selection is invalid. Try again (1-3): \n").strip()
+        if user_input.isnumeric():
+            user_input = int(user_input)
+            if 1 <= user_input <= 3:
+                return user_input
+        print("Invalid selection. Please choose a number between 1 and 3.\n")
 
+def openGameMenu():
+    '''
+    Main loop for game interaction. Runs one of three branches based on user input.
+    '''
+    while True:
+        print('1) Leave town (Fight monster)')
+        print('2) Find a nearby Inn (Restore HP for 5 GP)')
+        print('3) Quit')
+        
+        action = get_valid_input()
+
+        if action == 1:
+            print('You leave the town gates and head towards the forest.')
+            print('...')
+            print('A branch snaps near by!')
+            gameCombatLoop.fightMonster()
+        elif action == 2:
+            print("\nYou find your way to the neighboring inn.\nFor 5 GP you get a hot meal and a bed to sleep in.")
+            print('...')
+            print("You feel refreshed and ready for your next adventure.")
+        elif action == 3:
+            print("\nGoodbye, adventurer! See you next time.")
+            break
         
 if __name__ == '__main__':
-    choose_function()
+    
+    name = input('What is your name?\n') 
+    print(f'\n{gameFunctions.print_welcome(name)}\n')
+    town_splash()
+    openGameMenu()
     
 
