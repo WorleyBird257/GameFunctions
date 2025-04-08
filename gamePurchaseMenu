@@ -1,0 +1,96 @@
+import random, gameFunctions, gameUserInventory
+from gameData import shop_item_descriptions, healing_amount
+
+shop_items = { #item name : (price, stock)
+    'Apple': (10, 5),
+    'Small Potion': (20, 3),
+    'Sword': (35, 1),
+    'Rusty Shield': (35, 1),
+    'Elixer': (50, 4)
+    }
+
+def purchase_shop_menu(items):
+    '''
+    Displays items in shop_items dictionary available for purchase in a stylized menu.
+    Based on code in gameFunctions.
+
+    Parameter: shop_item dictionary
+
+    Returns: None
+    '''
+    print(' ' + '_' * 24 + ' ')
+    print('|' + '*' + ' ' * 22 + '*' + '|')
+    for item, (price, stock) in shop_items.items():
+        if stock > 0:
+            dollarPrice = f'${price:.2f}'
+            print('|' + f'{item:<12} ({stock})' + f'{dollarPrice:>8}' + '|')
+    print('|' + '_' * 24 + '|')
+
+
+def gameShopLoop(startingMoney):
+    '''
+    Shop loop. Allows for purchasing items and adds to inventory.
+    Uses purchaseItem function to check quanitity and money available.
+    Shop inventory changes after purchasing with loop breaking after user input or by emptying store's inventory.
+
+    Parameter: startingMoney
+
+    Returns: None
+    '''
+    while startingMoney > 0: #shop is open if you have money
+        if all(stock <= 0 for _, (_, stock) in shop_items.items()): #shop is closed if everything is purchased
+            print("The door is locked. A sign on the window says\n Out of inventory, come back later!")
+            break
+        #runs normal shop loop if you have money and theres stuff to buy
+        print('\nWelcome to Griz Market!')
+        print(f'You have {startingMoney}GP available')
+        purchase_shop_menu(shop_items)
+        
+        # User chooses an item to purchase
+        chosen_item = input('\nEnter the name of the item you\'d like to purchase.\n or type "exit" to leave):\n ').strip().title()
+        if chosen_item.lower() == 'exit': #exits shop
+            print('You exit the shop.\n')
+            break
+            
+        # verifies purchase (item name)
+        if chosen_item not in shop_items: 
+            print('Sorry, I don\'t have any of that item.')
+            continue
+        
+        # verifies item (stock) 
+        item_price, item_stock = shop_items[chosen_item]
+        if item_stock <= 0: 
+            print(f'Sorry, {chosen_item} is out of stock!')
+        
+        quantity_to_purchase = int(input('How many? '))
+        # stops overbuying. automatically buys max items with max money (could be changed to ask y/n instead)
+        if quantity_to_purchase > item_stock:
+            print(f'There is only have {item_stock} {chosen_item}(s) left. You bought the remaining {chosen_item}.')
+            quantity_to_purchase = item_stock
+
+        total_cost = item_price * quantity_to_purchase
+
+        # If there's not enough money to purchase, loop stops from adding item to inventory
+        if startingMoney < total_cost:
+            print('\nYou don\'t have enough gold to purchase anything.')
+            continue
+
+        # Calls the purchasing function, adds to inventory
+        purchased_quantity, remaining_money = gameFunctions.purchase_item(item_price, startingMoney, quantity_to_purchase)
+        startingMoney = remaining_money
+        gameUserInventory.addToInventory(chosen_item, quantity_to_purchase)
+
+        #updates shop inventory
+        shop_items[chosen_item] = (item_price, item_stock - purchased_quantity) 
+        print(f"You bought {purchased_quantity} {chosen_item}(s). Remaining money: ${remaining_money:.2f}")
+        
+        if startingMoney <= 0:
+            print('\nYou don\'t have enough gold to purchase anything.')
+            print('The shopkeeper kicks you out!\n')
+            break
+    
+        
+    
+if __name__ == '__main__':
+    startingMoney = 45 #variable can be used outside of module
+    gameShopLoop(startingMoney)
