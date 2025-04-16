@@ -1,0 +1,111 @@
+import pygame
+import gameCombatLoop
+from gameData import game_map
+from gameData import player_stats
+
+#initialize map variables
+tileSize = 32
+MapWidth = 10
+MapHeight = 10 
+SCREEN_WIDTH = tileSize * MapWidth
+SCREEN_HEIGHT = tileSize * MapHeight
+
+colors = {
+    0: (0, 0, 0),  # Empty
+    1: (0, 200, 0),  # Town
+    2: (34, 139, 34),  # Forest
+    3: (139, 69, 19),  # Road
+    4: (0, 0, 255),  # Water 
+    5: (194, 178, 128),  # Sand
+    6: (255, 0, 0) #monster 
+}
+
+#map and town positions:
+town_x, town_y = 4, 5
+
+#player initialization:
+player_x, player_y = town_x, town_y # starts at town's position on map
+player_rect = pygame.Rect(player_x * tileSize, player_y * tileSize, tileSize, tileSize)
+
+def draw_map(screen, game_map):
+    for row in range(MapHeight):
+        for col in range(MapWidth):
+            tile = game_map[row][col]
+            pygame.draw.rect(screen, colors[tile], pygame.Rect(col * tileSize, row * tileSize, tileSize, tileSize))
+
+def explore_map(player_x, player_y, player_stats):
+    pygame.init() #initialize game
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT)) #screen size
+
+    clock = pygame.time.Clock() 
+    player_stats['position'] = (player_x, player_y)
+    left_town = False #doesnt immediately break loop if player starts on town square
+    movement_cooldown = 1.5
+    move_timer = movement_cooldown 
+    
+    running = True
+    while running:
+        screen.fill((0,0,0)) # colors frame black, "erasing" blur
+        draw_map(screen, game_map)  # render map
+    
+        pygame.draw.circle(screen, (0, 200, 0), (town_x * tileSize + 16, town_y * tileSize + 16), 16) #draws town "green"
+        pygame.draw.rect(screen, (200, 200, 200), player_rect) # draws player "white"
+        pygame.draw.circle(screen, (255, 0, 0), (7 * tileSize + 16, 2 * tileSize + 16), 16) #draws monster "red"
+        
+        #event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:  # Allows exiting with ESC
+                    running = False
+
+        key = pygame.key.get_pressed()
+        prev_x, prev_y = player_x, player_y  
+
+        #arrow directions and handling
+        if move_timer <= 0:
+            
+            if key[pygame.K_UP] and player_y > 0:
+                player_y -= 1
+            if key[pygame.K_DOWN] and player_y < MapHeight - 1:
+                player_y += 1
+            elif key[pygame.K_LEFT] and player_x > 0:
+                player_x -= 1
+            elif key[pygame.K_RIGHT] and player_x < MapWidth - 1:
+                player_x += 1
+            move_timer = movement_cooldown
+        else:
+            move_timer -= 1
+            
+        #updating player position
+        player_rect.topleft = (player_x * tileSize, player_y * tileSize)
+        player_stats['position'] = (player_x, player_y)  
+
+        if (player_x, player_y) != (town_x, town_y):
+            left_town = True
+
+        # Town return logic
+        if player_x == town_x and player_y == town_y:
+            if left_town:  # Only exit if player has left town at least once
+                print("Returning to town menu...")
+                running = False
+
+        #monster encounter
+        if (player_x, player_y) == (7,2) and (prev_x, prev_y) != (7,2):
+            has_fought_monster = False
+            if has_fought_monster == False:
+                print('A branch snaps nearby!')
+                player_stats = gameCombatLoop.fightMonster(player_stats)
+                has_fought_monster = True  # Mark the battle as completed
+
+            screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  
+            draw_map(screen, game_map)  # Redraw the map
+
+        pygame.display.update()
+        clock.tick(30)
+    pygame.quit()
+
+
+if __name__ == '__main__':
+    explore_map(player_x, player_y, player_stats)
