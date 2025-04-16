@@ -1,7 +1,8 @@
 '''Opens the Adventure Game.
-Updated: 4/9/25
+Updated: 4/15/25
 Draws data from gameData to resolve module dependencies.
 Able to save game!
+Now with Graphics!
 Includes:
 combatLoop with usable items for combat and healing and random monster generation.
     -items can only be equipped outside of combat. hidden durability stat not implemented.
@@ -9,15 +10,19 @@ purchaseMenuLoop: working shop with dynamic inventory - doesn't update after pur
 userInventory: supports combat and non-combat item manipulation
     -unequip function needs better implementing
  '''
-
-import random, gameCombatLoop, gamePurchaseMenu, gameUserInventory
+import random, json
+import gameCombatLoop, gamePurchaseMenu, gameUserInventory, gameExplore
 from gameData import player_stats
-import json
+from gameData import game_map
 
-def save_game(filename, player_stats):
+def save_game(filename, player_stats, game_map):
+    save_data = {
+        'player_stats': player_stats,
+        'game_map': game_map
+        }
     try:
         with open(filename, 'w') as save_file:
-            json.dump(player_stats, save_file)
+            json.dump(save_data, save_file)
             print(f"Game successfully saved to {filename}!")
     except IOError:
         print("Error saving the game. Please try again.")
@@ -25,17 +30,21 @@ def save_game(filename, player_stats):
 def load_game(filename):
     try:
         with open(filename, 'r') as save_file:
-            game_data = json.load(save_file)  # Load saved data
+            save_data = json.load(save_file)  # Load saved data
         print(f"Game successfully loaded from {filename}!")
-        
-        # Ensure `gold` is numeric and not None
-        game_data['gold'] = game_data.get('gold', 0) or 0  # Reset to 0 if None or invalid
+
+        player_stats = save_data.get('player_stats', {})
+        game_map = save_data.get('game_map', [[0] * 10 for _ in range(10)])  # Default empty map if missing
+
+        player_stats['position'] = tuple(player_stats.get('position', (4,5)))
+        # Ensure 'gold' is numeric and not None
+        player_stats['gold'] = player_stats.get('gold', 0) or 0  # Reset to 0 if None or invalid
         
         # Similarly, validate other keys as needed
-        if game_data.get('max_health') is None:
-            game_data['max_health'] = game_data.get('health', 50)  # Default max_health
+        if player_stats.get('max_health') is None:
+            player_stats['max_health'] = player_stats.get('health', 50)  # Default max_health
         
-        return game_data  # Return the cleaned data
+        return player_stats, game_map  # Return the cleaned data
     except FileNotFoundError:
         print(f"No save file named {filename} found. Starting a new game.")
         return {
@@ -82,21 +91,25 @@ def start_game(player_stats):
             'experience': 0,
             'inventory': {},
             'equipment': {},
+            'position': (4,5),
             })
 
-        town_splash()
+        game_map = [[0] * 10 for _ in range(10)]
+
+        town_splash(player_stats)
 
     elif choice == '2':  # Load game 
         filename = input("Enter the filename of your save file: ").strip()
 
-        loaded_data = load_game(filename)
-        player_stats.update(loaded_data)
+        player_stats, game_map = load_game(filename)
+        #player_stats.update(loaded_data)
         
          # Ensure player_stats reflects the loaded data
-        town_splash()
-    return player_stats
+        town_splash(player_stats)
+        
+    return player_stats, game_map
 
-def town_splash(): 
+def town_splash(player_stats): 
     '''
     Small 'splash' intro to the game!
     Can be expanded for character creation, new game or loading old one.
@@ -108,10 +121,10 @@ def town_splash():
     Returns:
         None
     '''
-    print(f'\nWelcome, {player_stats['name']}!')
+    print(f'\nWelcome, {player_stats["name"]}!')
     print('You are in town.')
-    print(f'Current HP: {player_stats['health']}, Current Gold: {player_stats['gold']}')
-    print('\nWhat would you like to do?\n')
+    print(f'Current HP: {player_stats["health"]}, Current Gold: {player_stats["gold"]}')
+    print('\nWhat would you like to do?')
 
 def get_valid_input():
     '''
@@ -136,7 +149,7 @@ def openGameMenu(player_stats):
     '''
     while True:
         print(f'\nCurrent HP: {player_stats['health']}, Current Gold: {player_stats['gold']}')
-        print('1) Leave town (Fight monster)')
+        print('1) Leave town ')
         print('2) Visit the local market')
         print('3) Check Inventory')
         print('4) Find a nearby Inn (Restore HP for 5 GP)')
@@ -144,11 +157,10 @@ def openGameMenu(player_stats):
         
         action = get_valid_input()
 
-        if action == 1: #fight
-            print('You leave the town gates and head towards the forest.')
-            print('...')
-            print('A branch snaps near by!')
-            gameCombatLoop.fightMonster(player_stats)
+        if action == 1: #fight / explore
+            print('You leave the town gates and head towards the forest...')
+            player_x, player_y = player_stats.get('position', (4,5))
+            gameExplore.explore_map(player_x, player_y, player_stats)
             
         elif action == 2: #shop
             print('You head towards the center of town. Markets line the square')
@@ -158,7 +170,7 @@ def openGameMenu(player_stats):
             gameUserInventory.checkInventory()
             
         elif action == 4: #rest
-            if player_stats.get('gold', 0) >= 5: #ISSUE
+            if player_stats.get('gold', 0) >= 5: 
                 print("\nYou find your way to the neighboring inn.\nFor 5 GP you get a hot meal and a bed to sleep in.")
                 print('...')
                 player_stats['health'] = 50  # Restore health to maximum
@@ -172,11 +184,13 @@ def openGameMenu(player_stats):
                 
         elif action == 5: #quit
             filename = input("Enter a filename to save your game: ").strip()
-            save_game(filename, player_stats)
+            save_game(filename, player_stats, game_map)
             print("\nGoodbye, adventurer! See you next time.")
             break
     
 if __name__ == '__main__':
     
-    player_stats = start_game(player_stats)  # Pass player_stats, capture updates
+    player_stats, game_map = start_game(player_stats)
+    print(player_stats)
+    # Pass player_stats, capture updates
     openGameMenu(player_stats) #open game menu
