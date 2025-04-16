@@ -10,7 +10,7 @@ Functions:
     random_stat: produces a random integer at x,y range for generating monster stats
     new_random_monster: produces a monster to fight. 
 '''
-import random, gameUserInventory
+import random, gameUserInventory, game
 from gameData import shop_item_descriptions, healing_amount, item_combat_stats, inventory, player_stats
 
 def random_stat(min_val, max_val):
@@ -35,7 +35,7 @@ def new_random_monster(monster_name=None):
         'Draugr': {'health': random_stat(140, 175), 'power': random_stat(15, 25), 'gold': random_stat(1, 15), 'experience': random_stat(15, 30)},
         'Bat': {'health': random_stat(50, 80), 'power': random_stat(10, 25), 'gold': random_stat(1, 7), 'experience': random_stat(15, 30)},
         'Wolf': {'health': random_stat(150, 180), 'power': random_stat(15, 20), 'gold': random_stat(5, 15), 'experience': random_stat(15, 30)},
-        'Skeleton': {'health': random_stat(160, 200), 'power': random_stat(20, 40), 'gold': random_stat(10, 25), 'experience': random_stat(15, 30)}
+        'Skeleton': {'health': random_stat(160, 200), 'power': random_stat(20, 30), 'gold': random_stat(10, 25), 'experience': random_stat(15, 30)}
     }
 
     monster_description_dict = { #second dictionary holds monster name with description. Ties the two together
@@ -113,7 +113,7 @@ def displayFightStatistics(player_stats, monster): # Displays user and monster H
     print(f"Your HP: {player_stats['health']}")
     print(f"{monster['name']} HP: {monster['health']}")
 
-def getUserFightOptions(): # Combat menu with two options. Validates input within function.
+def getUserFightOptions(): # Combat menu with three options. Validates input within function.
     print('\nWhat would you like to do?')
     print('1) Attack')
     print('2) Item')
@@ -146,11 +146,10 @@ def fightMonster(player_stats):
             if monster['health'] <= 0:
                 # First retrieve the current gold value, modify it, then reassign
                 player_stats['gold'] = player_stats.get('gold', 0) + (monster.get('gold') or 0)
-                #player_stats.get('gold', 0) += monster.get('money', 0)  # Default to 0
-                print(f"\nYou defeated the {monster['name']}!")
-                
-                print(f"You loot {monster['gold']} gold coins!")
                 player_stats['experience'] += monster.get('experience', 0)
+                
+                print(f"\nYou defeated the {monster['name']}!")
+                print(f"You loot {monster['gold']} gold coins!")
                 print(f"You gain {monster['experience']} experience!")
                 break
             
@@ -160,7 +159,6 @@ def fightMonster(player_stats):
                 item_defense_stat = item_combat_stats.get(equipped_item, [0])[0]  # Fetch attack stats for equipped item
             else:
                 item_defense_stat = 0
-            #item_defense_stat = item_combat_stats.get(equipped_item, [1])[0]
             damage_to_user = (random.randint(monster['power'] - 5, monster['power'])) - (player_stats['defense'] + item_defense_stat)
             if damage_to_user <=0:
                 damage_to_user = 0
@@ -169,8 +167,11 @@ def fightMonster(player_stats):
 
             # Check if the player is defeated
             if player_stats['health'] <= 0:
-                print("\nYou have been defeated! Better luck next time.")
-                break
+                print("\nYou have been defeated!")
+                print('Bloody and weary, you return to town.')
+                player_stats['position'] = (4,5)
+                return player_stats
+                
 
         elif action == 2:  # Use an Item
             if player_stats['inventory']:  # Check if inventory is not empty
@@ -188,13 +189,26 @@ def fightMonster(player_stats):
                             print(f'You have no more {item_to_use} left.')
                 if monster['health'] <= 0:  # Check if monster is killed by an item
                     break
-                #else:
-                    #print('That item cannot be found')
             else:
                 print("Your inventory is empty. Returning to combat...")
                 
-        elif action == 3:  # Flee option
+        elif action == 3:  # Flee option #avoids infinite monster loop
             print(f"\nYou ran away from the {monster['name']}.")
+            flee_x, flee_y = player_stats["position"]
+
+            if flee_x > 0:  # If possible, move left
+                flee_x -= 1
+            elif flee_x < MapWidth - 1:  # Otherwise, move right
+                flee_x += 1
+            elif flee_y > 0:  # Move up if left/right isn’t possible
+                flee_y -= 1
+            elif flee_y < MapHeight - 1:  # Move down if needed
+                flee_y += 1
+
+            player_stats["position"] = (flee_x, flee_y)
             break
     return player_stats
-    print("\nExhausted, you return to town...")
+
+    player_x, player_y = player_stats["position"]
+    gameExplore.explore_map(player_x, player_y, player_stats)
+
