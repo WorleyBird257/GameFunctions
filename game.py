@@ -1,8 +1,7 @@
 '''Opens the Adventure Game.
-Updated: 4/15/25
+Updated: 4/16/25
 Draws data from gameData to resolve module dependencies.
 Able to save game!
-Now with Graphics!
 Includes:
 combatLoop with usable items for combat and healing and random monster generation.
     -items can only be equipped outside of combat. hidden durability stat not implemented.
@@ -14,6 +13,8 @@ import random, json
 import gameCombatLoop, gamePurchaseMenu, gameUserInventory, gameExplore
 from gameData import player_stats
 from gameData import game_map
+from wanderingMonster import WanderingMonster  
+#monsters = WanderingMonster.generate_initial_monsters()
 
 def save_game(filename, player_stats, game_map):
     save_data = {
@@ -50,7 +51,7 @@ def load_game(filename):
         return {
             'name': 'Adventurer',
             'attack': 10,
-            'defense': 5,
+            'defense': 10,
             'health': 50,
             'gold': 100,
             'experience': 0,
@@ -62,7 +63,7 @@ def load_game(filename):
         return {
             'name': 'Adventurer',
             'attack': 10,
-            'defense': 5,
+            'defense': 10,
             'health': 50,
             'gold': 100,
             'experience': 0,
@@ -85,7 +86,7 @@ def start_game(player_stats):
         player_stats.update({
             'name': name if name else 'Adventurer',
             'attack': 10,
-            'defense': 5,
+            'defense': 10,
             'health': 50,
             'gold': 100,
             'experience': 0,
@@ -123,7 +124,7 @@ def town_splash(player_stats):
     '''
     print(f'\nWelcome, {player_stats["name"]}!')
     print('You are in town.')
-    print(f'Current HP: {player_stats["health"]}, Current Gold: {player_stats["gold"]}')
+    print(f"Current HP: {player_stats['health']}, Current Gold: {player_stats['gold']}")
     print('\nWhat would you like to do?')
 
 def get_valid_input():
@@ -143,7 +144,7 @@ def get_valid_input():
                 return user_input
         print("Invalid selection. Please choose a number between 1 and 5. ")
 
-def openGameMenu(player_stats):
+def openGameMenu(player_stats, game_map):
     '''
     Main loop for game interaction. Runs one of five branches based on user input.
     '''
@@ -160,7 +161,10 @@ def openGameMenu(player_stats):
         if action == 1: #fight / explore
             print('You leave the town gates and head towards the forest...')
             player_x, player_y = player_stats.get('position', (4,5))
-            gameExplore.explore_map(player_x, player_y, player_stats)
+            player_move_counter = 0 #********
+            # Ensure monsters are initialized
+            monsters = WanderingMonster.generate_initial_monsters()
+            gameExplore.explore_map(player_x, player_y, player_stats, monsters, player_move_counter)  # Pass monsters into the function
             
         elif action == 2: #shop
             print('You head towards the center of town. Markets line the square')
@@ -191,6 +195,6 @@ def openGameMenu(player_stats):
 if __name__ == '__main__':
     
     player_stats, game_map = start_game(player_stats)
-    print(player_stats)
+    # print(player_stats)
     # Pass player_stats, capture updates
-    openGameMenu(player_stats) #open game menu
+    openGameMenu(player_stats, game_map) #open game menu
