@@ -9,7 +9,7 @@ shop_item_descriptions = {  # binds shop_item elements with durability, item typ
 
 item_combat_stats = { #name (attack, defense, health, equipment slot)
     'Longsword': (15, 0, 0, 'hand'),
-    'Rusty Shield': (0, 5, 0, 'off hand')
+    'Rusty Shield': (0, 15, 0, 'off hand')
     }
 
 healing_amount = {
@@ -22,15 +22,38 @@ startingHP = 50
 startingGold =100
 
 player_stats = {
-    'name': 'Adventurer', #default name
-    'attack': 10,
-    'defense': 10,
-    'health': 0,
-    'gold': 0,
-    'experience': 0,
-    'inventory': {},
-    'equipment': {},
-    }
-
+    "name": "Adventurer",
+    "attack": 10,
+    "defense": 10,
+    "health": 50,
+    "gold": 100,
+    "experience": 0,
+    "inventory": {},
+    "equipment": {},
+    "position": (4, 5),  # Default spawn at town
+}
 inventory = player_stats['inventory']
 
+colors = {
+    0: (0, 0, 0),  # Empty
+    1: (0, 200, 0),  # Town
+    2: (34, 139, 34),  # Forest
+    3: (139, 69, 19),  # Road
+    4: (0, 0, 255),  # Water 
+    5: (194, 178, 128),  # Sand
+    6: (255, 0, 0), # Enemy
+}
+
+# 0 = Empty, 1 = Town, 2 = Forest, 3 = Road, 4 = water, 5 = sand 6 = enemy
+game_map = [
+    [0, 0, 0, 0, 0, 0, 0, 2, 2, 2],
+    [0, 0, 0, 0, 0, 0, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 0, 2, 0, 2, 2],
+    [0, 0, 0, 0, 2, 2, 2, 2, 0, 0],
+    [0, 0, 0, 0, 0, 2, 2, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [2, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+    [2, 2, 2, 0, 0, 0, 0, 0, 5, 5],
+    [2, 2, 2, 0, 0, 0, 0, 4, 4, 4],
+    [2, 2, 2, 0, 0, 5, 4, 5, 0, 0]
+]
