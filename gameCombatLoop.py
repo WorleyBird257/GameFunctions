@@ -10,7 +10,7 @@ Functions:
     random_stat: produces a random integer at x,y range for generating monster stats
     new_random_monster: produces a monster to fight. 
 '''
-import random, gameUserInventory, game
+import random, gameUserInventory, game, gameExplore
 from wanderingMonster import WanderingMonster
 from gameData import shop_item_descriptions, healing_amount, item_combat_stats, inventory, player_stats
 from gameData import tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y
