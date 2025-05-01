@@ -1,7 +1,9 @@
 '''Opens the Adventure Game.
-Updated: 4/16/25
+Updated: 4/30/25
 Draws data from gameData to resolve module dependencies.
 Able to save game!
+There's graphics and monsters that move!
+
 Includes:
 combatLoop with usable items for combat and healing and random monster generation.
     -items can only be equipped outside of combat. hidden durability stat not implemented.
@@ -9,108 +11,63 @@ purchaseMenuLoop: working shop with dynamic inventory - doesn't update after pur
 userInventory: supports combat and non-combat item manipulation
     -unequip function needs better implementing
  '''
-import random, json
-import gameCombatLoop, gamePurchaseMenu, gameUserInventory, gameExplore
-from gameData import player_stats
-from gameData import game_map
+import json
+import gameCombatLoop
+import gamePurchaseMenu
+import gameUserInventory
+import gameExplore
+from gameData import game_map, tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y, Player
 from wanderingMonster import WanderingMonster  
-#monsters = WanderingMonster.generate_initial_monsters()
 
-def save_game(filename, player_stats, game_map):
-    save_data = {
-        'player_stats': player_stats,
-        'game_map': game_map
-        }
-    try:
-        with open(filename, 'w') as save_file:
-            json.dump(save_data, save_file)
-            print(f"Game successfully saved to {filename}!")
-    except IOError:
-        print("Error saving the game. Please try again.")
-    
-def load_game(filename):
-    try:
-        with open(filename, 'r') as save_file:
-            save_data = json.load(save_file)  # Load saved data
-        print(f"Game successfully loaded from {filename}!")
-
-        player_stats = save_data.get('player_stats', {})
-        game_map = save_data.get('game_map', [[0] * 10 for _ in range(10)])  # Default empty map if missing
-
-        player_stats['position'] = tuple(player_stats.get('position', (4,5)))
-        # Ensure 'gold' is numeric and not None
-        player_stats['gold'] = player_stats.get('gold', 0) or 0  # Reset to 0 if None or invalid
+def openGameMenu(player_instance, game_map):
+    '''
+    Main loop for game interaction. Runs one of five branches based on user input.
+    '''
+    while True:
+        print(f'\nCurrent HP: {player_instance.health}, Current Gold: {player_instance.gold}')
+        print('1) Leave town ')
+        print('2) Visit the local market')
+        print('3) Check Inventory')
+        print('4) Find a nearby Inn (Restore HP for 5 GP)')
+        print('5) Quit')
         
-        # Similarly, validate other keys as needed
-        if player_stats.get('max_health') is None:
-            player_stats['max_health'] = player_stats.get('health', 50)  # Default max_health
-        
-        return player_stats, game_map  # Return the cleaned data
-    except FileNotFoundError:
-        print(f"No save file named {filename} found. Starting a new game.")
-        return {
-            'name': 'Adventurer',
-            'attack': 10,
-            'defense': 10,
-            'health': 50,
-            'gold': 100,
-            'experience': 0,
-            'inventory': {},
-            'equipment': {},
-        }
-    except json.JSONDecodeError:
-        print("Error loading the save file—it might be corrupted.")
-        return {
-            'name': 'Adventurer',
-            'attack': 10,
-            'defense': 10,
-            'health': 50,
-            'gold': 100,
-            'experience': 0,
-            'inventory': {},
-            'equipment': {},
-        }
-        
-def start_game(player_stats):
-    print("Welcome to the Adventure game!")
-    print("1) Start a new game")
-    print("2) Load a saved game")
-    choice = input("Choose an option (1-2): ").strip()
-    
-    while choice not in ['1', '2']:
-        choice = input("Invalid choice. Please select 1 or 2: ").strip()
-    
-    if choice == '1': #new game
-        print('Starting new game...')
-        name = input('What is your name?\n')
-        player_stats.update({
-            'name': name if name else 'Adventurer',
-            'attack': 10,
-            'defense': 10,
-            'health': 50,
-            'gold': 100,
-            'experience': 0,
-            'inventory': {},
-            'equipment': {},
-            'position': (4,5),
-            })
+        action = get_valid_input()
 
-        game_map = [[0] * 10 for _ in range(10)]
+        if action == 1: #fight / explore
+            print('You leave the town gates and head towards the forest...')
+            player_instance_x, player_instance_y = player_instance.position
+            player_move_counter = 0
+            # Ensure monsters are initialized
+            monsters = WanderingMonster.generate_initial_monsters()
+            gameExplore.explore_map(player_instance, monsters, player_move_counter=0)  # Pass monsters into the function
+            
+        elif action == 2: #shop
+            print('You head towards the center of town. Markets line the square')
+            gamePurchaseMenu.game_shop_loop(player_instance)
+            
+        elif action == 3: #check inventory
+            gameUserInventory.check_inventory(player_instance)
+            
+        elif action == 4: #rest
+            if player_instance.gold >= 5: 
+                print("\nYou find your way to the neighboring inn.\nFor 5 GP you get a hot meal and a bed to sleep in.")
+                print('...')
+                player_instance.health = 50  # Restore health to maximum
+                player_instance.gold -= 5  # Subtract 5 gold from purse
+                print("You feel refreshed and ready for your next adventure.")
+            else:
+                print('The innkeeper shakes their head and points to the stables.')
+                player_instance.health = max(player_instance.health - 5, 0)  # Reduce health but ensure it doesn’t go negative
+                print('You find a clean pile of straw to lay down on...')
+                print('The roosters wake you up at dawn.\n')
+                
+        elif action == 5: #quit
+            filename = input("Enter a filename to save your game: ").strip()
+            save_game(filename, player_instance, game_map)
+            print("\nGoodbye, adventurer! See you next time.")
+            break
 
-        town_splash(player_stats)
-
-    elif choice == '2':  # Load game 
-        filename = input("Enter the filename of your save file: ").strip()
-
-        player_stats, game_map = load_game(filename)
-        #player_stats.update(loaded_data)
-        
-         # Ensure player_stats reflects the loaded data
-        town_splash(player_stats)
-        
-    return player_stats, game_map
-
-def town_splash(player_stats): 
+def town_splash(player_instance): 
     '''
     Small 'splash' intro to the game!
     Can be expanded for character creation, new game or loading old one.
@@ -122,9 +79,9 @@ def town_splash(player_stats):
     Returns:
         None
     '''
-    print(f'\nWelcome, {player_stats["name"]}!')
+    print(f'\nWelcome, {player_instance.name}!')
     print('You are in town.')
-    print(f"Current HP: {player_stats['health']}, Current Gold: {player_stats['gold']}")
+    print(f"Current HP: {player_instance.health}, Current Gold: {player_instance.gold}")
     print('\nWhat would you like to do?')
 
 def get_valid_input():
@@ -144,57 +101,85 @@ def get_valid_input():
                 return user_input
         print("Invalid selection. Please choose a number between 1 and 5. ")
 
-def openGameMenu(player_stats, game_map):
-    '''
-    Main loop for game interaction. Runs one of five branches based on user input.
-    '''
-    while True:
-        print(f'\nCurrent HP: {player_stats['health']}, Current Gold: {player_stats['gold']}')
-        print('1) Leave town ')
-        print('2) Visit the local market')
-        print('3) Check Inventory')
-        print('4) Find a nearby Inn (Restore HP for 5 GP)')
-        print('5) Quit')
-        
-        action = get_valid_input()
+def start_game():
+    print("Welcome to the Adventure game!")
+    print("1) Start a new game")
+    print("2) Load a saved game")
+    choice = input("Choose an option (1-2): ").strip()
 
-        if action == 1: #fight / explore
-            print('You leave the town gates and head towards the forest...')
-            player_x, player_y = player_stats.get('position', (4,5))
-            player_move_counter = 0 #********
-            # Ensure monsters are initialized
-            monsters = WanderingMonster.generate_initial_monsters()
-            gameExplore.explore_map(player_x, player_y, player_stats, monsters, player_move_counter)  # Pass monsters into the function
-            
-        elif action == 2: #shop
-            print('You head towards the center of town. Markets line the square')
-            gamePurchaseMenu.gameShopLoop(player_stats)
-            
-        elif action == 3: #check inventory
-            gameUserInventory.checkInventory()
-            
-        elif action == 4: #rest
-            if player_stats.get('gold', 0) >= 5: 
-                print("\nYou find your way to the neighboring inn.\nFor 5 GP you get a hot meal and a bed to sleep in.")
-                print('...')
-                player_stats['health'] = 50  # Restore health to maximum
-                player_stats['gold'] -= 5  # Subtract 5 gold from purse
-                print("You feel refreshed and ready for your next adventure.")
-            else:
-                print('The innkeeper shakes their head and points to the stables.')
-                player_stats['health'] = max(player_stats['health'] - 5, 0)  # Reduce health but ensure it doesn’t go negative
-                print('You find a clean pile of straw to lay down on...')
-                print('The roosters wake you up at dawn.\n')
-                
-        elif action == 5: #quit
-            filename = input("Enter a filename to save your game: ").strip()
-            save_game(filename, player_stats, game_map)
-            print("\nGoodbye, adventurer! See you next time.")
-            break
-    
+    # Validate user choice
+    while choice not in ['1', '2']:
+        choice = input("Invalid choice. Please select 1 or 2: ").strip()
+
+    if choice == '1':  # New game
+        print('Starting new game...')
+        name = input('What is your name?\n')
+        player_instance = Player(
+            name=name if name else 'Adventurer',  # Default to 'Adventurer'
+            health=50,
+            gold=100,
+            position=(4, 5)
+        )
+        game_map = [[0] * MapWidth for _ in range(MapHeight)]  # Dynamic map size
+        town_splash(player_instance)
+        return player_instance, game_map
+
+    elif choice == '2':  # Load saved game
+        filename = input("Enter the save file name (default: save_game.json): ").strip()
+        if not filename:  # Provide a default file name if none is given
+            filename = "save_game.json"
+        try:
+            player_instance, game_map = load_game(filename)
+            return player_instance, game_map
+        
+        except Exception as e:
+            print(f"Failed to load save file: {e}")
+            print("Starting a new game instead...")
+            player_instance = Player(name="Adventurer", health=50, gold=100, position=(4, 5))
+            game_map = [[0] * MapWidth for _ in range(MapHeight)]
+            return player_instance, game_map
+
+    # Fallback in case of invalid choice (shouldn't trigger with proper logic)
+    else:
+        print("Invalid option, starting a default new game...")
+        player_instance = Player(name="Adventurer", health=50, gold=100, position=(4, 5))
+        game_map = [[0] * MapWidth for _ in range(MapHeight)]
+
+def save_game(filename, player_instance, game_map):
+    """Save the player's progress and game state to a file."""
+    try:
+        save_data = {
+            "player": player_instance.to_dict(),
+            "game_map": game_map,
+        }
+        with open(filename, "w") as save_file:
+            json.dump(save_data, save_file, indent=4)
+        print(f"Game saved successfully to {filename}!")
+    except Exception as e:
+        print(f"An error occurred while saving the game: {e}")
+        
+def load_game(filename):
+    """Load the player's progress and game state from a file."""
+    try:
+        with open(filename, "r") as save_file:
+            save_data = json.load(save_file)
+
+        # Reconstruct the Player instance
+        player_instance = Player.from_dict(save_data["player"])
+
+        # Retrieve the game map
+        game_map = save_data["game_map"]
+
+        print("Game loaded successfully!")
+        return player_instance, game_map
+    except FileNotFoundError:
+        print("Save file not found! Starting a new game...")
+        return Player(name="Adventurer", health=50, gold=100, position=(4, 5)), [[0] * MapWidth for _ in range(MapHeight)]
+    except Exception as e:
+        print(f"An error occurred while loading the game: {e}")
+        return Player(name="Adventurer", health=50, gold=100, position=(4, 5)), [[0] * MapWidth for _ in range(MapHeight)]
+
 if __name__ == '__main__':
     
-    player_stats, game_map = start_game(player_stats)
-    # print(player_stats)
-    # Pass player_stats, capture updates
-    openGameMenu(player_stats, game_map) #open game menu
+    player_instance, game_map = start_game()
+    openGameMenu(player_instance, game_map)
