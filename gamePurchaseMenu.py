@@ -1,5 +1,5 @@
 import random, gameUserInventory
-from gameData import shop_item_descriptions, healing_amount, player_stats
+from gameData import shop_item_descriptions, healing_amount
 
 shop_items = { #item name : (price, stock)
     'Apple': (10, 5),
@@ -27,36 +27,24 @@ def purchase_shop_menu(items):
             print('|' + f'{item:<12} ({stock})' + f'{dollarPrice:>8}' + '|')
     print('|' + '_' * 24 + '|')
 
-startingGold = player_stats['gold'] 
-def gameShopLoop(startingGold):
-    '''
-    Shop loop. Allows for purchasing items and adds to inventory.
-    Uses purchaseItem function to check quanitity and money available.
-    Shop inventory changes after purchasing with loop breaking after user input or by emptying store's inventory.
-
-    Parameter: player_stats['gold']
-
-    Returns: None
-    '''
-
-def gameShopLoop(player_stats):
+def game_shop_loop(player_instance):
     '''
     Shop loop. Allows for purchasing items and adds to inventory.
     Uses purchaseItem function to check quantity and money available.
     Shop inventory changes after purchasing with loop breaking after user input or by emptying the store's inventory.
 
-    Parameter: player_stats (dict)
+    Parameter: player_instance_stats (Class)
 
     Returns: None
     '''
-    while player_stats['gold'] > 0:  # Shop is open if the player has money
+    while player_instance_instance.gold > 0:  # Shop is open if the Player has money
         if all(stock <= 0 for _, (_, stock) in shop_items.items()):  # Shop closes if everything is purchased
             print("The door is locked. A sign on the window says\nOut of inventory, come back later!\n")
             break
 
         # Normal shop loop
         print('\nWelcome to Griz Market!')
-        print(f'You have {player_stats["gold"]}GP available')
+        print(f'You have {player_instance.gold}GP available')
         purchase_shop_menu(shop_items)
         
         # User chooses an item to purchase
@@ -85,20 +73,20 @@ def gameShopLoop(player_stats):
         total_cost = item_price * quantity_to_purchase
 
         # If there's not enough money to purchase
-        if player_stats['gold'] < total_cost:
+        if player_instance.gold < total_cost:
             print('\nYou don\'t have enough gold to purchase that.')
             continue
 
         # Purchase items and update stats
-        player_stats['gold'] -= total_cost  # Update gold directly in player_stats
-        gameUserInventory.addToInventory(chosen_item, quantity_to_purchase)  # Update inventory
+        player_instance.gold -= total_cost  # Update gold directly in Player_stats
+        player_instance.add_to_inventory(chosen_item, quantity_to_purchase)  # Update inventory
         shop_items[chosen_item] = (item_price, item_stock - quantity_to_purchase)  # Update shop inventory
 
         # Print purchase summary
-        print(f'You bought {quantity_to_purchase} {chosen_item}(s). Remaining money: ${player_stats['gold']:.2f}')
+        print(f'You bought {quantity_to_purchase} {chosen_item}(s). Remaining money: ${player_instance.gold:.2f}')
 
         # Exit if no gold left
-        if player_stats['gold'] <= 0:
+        if player_instance.gold <= 0:
             print('\nYou don\'t have enough gold to purchase anything.')
             print('The shopkeeper kicks you out!\n')
             break
