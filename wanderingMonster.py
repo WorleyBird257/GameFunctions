@@ -1,4 +1,5 @@
 import random
+import pygame
 from gameData import tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y
 
 class WanderingMonster:
@@ -25,7 +26,7 @@ class WanderingMonster:
         """Produces a random integer based on a range between two values."""
         return random.randint(min_val, max_val)
 
-    def __init__(self, name=None, x=None, y=None):  
+    def __init__(self, name=None, x=None, y=None, monster_type=''):  
         """Initializes a new random wandering monster."""
         if name is None: #spin the wheel!
             name = random.choice(list(self.monster_values_dict.keys()))
@@ -38,6 +39,9 @@ class WanderingMonster:
         self.power = self.random_stat(*self.monster_values_dict[name]['power'])
         self.experience = self.random_stat(*self.monster_values_dict[name]['experience'])
 
+        self.monster_type = monster_type #added so I can have pictures
+        self.image = self.get_monster_image()
+        
         # Assign a random starting position (not in town)
         self.x = x if x is not None else random.randint(0, MapWidth - 1)
         self.y = y if y is not None else random.randint(0, MapHeight - 1)
@@ -46,7 +50,25 @@ class WanderingMonster:
         while (self.x, self.y) == (town_x, town_y):
             self.x = random.randint(0, MapWidth - 1)
             self.y = random.randint(0, MapHeight - 1)
-
+            
+    def get_monster_image(self):
+        try:
+            if self.monster_type == 'Bat':
+                return pygame.image.load("assets/sprite_bat.png")
+            elif self.monster_type == 'Goblin':
+                return pygame.image.load("assets/sprite_goblin.png")
+            elif self.monster_type == 'Skeleton':
+                return pygame.image.load("assets/sprite_skele.png")
+            elif self.monster_type == 'Wolf':
+                return pygame.image.load("assets/sprite_wolf.png")
+            elif self.monster_type == "Draugr":
+                return pygame.image.load("assets/sprite_zombie.png")
+            else:
+                return None
+        except FileNotFoundError:
+            print(f'image for {self.monster_type} not found. Using fallback')
+            return None
+               
     def move(self):
         """Moves the monster in a random direction, ensuring it stays within grid bounds."""
         while True:  # Loop until a valid move is found
@@ -74,4 +96,15 @@ class WanderingMonster:
     @classmethod #allows scalability with creating monsters instead of creating instances repeatedly
     def generate_initial_monsters(cls, count=2):
         """Creates the initial set of monsters at game start."""
-        return [cls() for _ in range(count)]
+        monster_types = ['Bat', 'Goblin', 'Skeleton', 'Wolf', 'Draugr']  # Define types
+        monsters = []
+
+        for _ in range(count):  # Generate monsters
+            name = random.choice(monster_types)
+            x = random.randint(0, MapWidth - 1)
+            y = random.randint(0, MapHeight - 1)
+            #monster_type = random.choice(monster_types)
+            monsters.append(cls(name=name, x=x, y=y, monster_type=name))
+
+        return monsters
+        #return [cls() for _ in range(count)]
