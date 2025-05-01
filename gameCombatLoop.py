@@ -10,13 +10,98 @@ Functions:
     random_stat: produces a random integer at x,y range for generating monster stats
     new_random_monster: produces a monster to fight. 
 '''
-import random, gameUserInventory, game, gameExplore
+import random, gameUserInventory, game
 from wanderingMonster import WanderingMonster
-from gameData import shop_item_descriptions, healing_amount, item_combat_stats, inventory, player_stats
+from gameData import shop_item_descriptions, healing_amount, item_combat_stats, Player
 from gameData import tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y
 
-def combatItemMenu(item, player_stats):
-    #health = player_stats['health']
+def fight_monster(player_instance, monster): 
+    print(f"A wild {monster.name} appears!\n")
+ 
+    while  monster.health > 0 and player_instance.health > 0: 
+        display_fight_statistics(player_instance, monster)  # Display health
+        action = get_user_fight_options()  # Get user's choice
+
+        if action == 1:  # Attack option
+            # player_instance attacks monster
+            equipped_weapon = player_instance.equipment.get('hand')  # checks weapon stat
+            item_attack_stat = item_combat_stats.get(equipped_weapon, [0])[0] if equipped_weapon else 0  # Fetch attack stats for equipped item
+            damage_to_monster = random.randint(10, 20) + item_attack_stat
+            monster.health -= damage_to_monster
+            print(f"\nYou deal {damage_to_monster} damage to the {monster.name}!")
+            
+            # Check if monster is defeated
+            if  monster.health <= 0:
+                player_instance.gold += monster.gold
+                player_instance.experience += monster.experience
+                print(f"\nYou defeated the {monster.name}!")
+                print(f"You loot {monster.gold} gold coins!")
+                print(f"You gain {monster.experience} experience!")
+                break
+            
+            # Monster attacks user
+            equipped_shield = player_instance.equipment.get('off hand')  # check shield stat
+            item_defense_stat = item_combat_stats.get(equipped_shield, [1])[0] if equipped_shield else 0 # Fetch defense stats for equipped item
+            damage_to_user = (random.randint(monster.power - 5, monster.power)) - (player_instance.defense + item_defense_stat)
+            if damage_to_user <= 0: #prevents monster from dealing negative damage
+                damage_to_user = 0
+            player_instance.health -= damage_to_user
+            print(f"The {monster.name} attacks you for {damage_to_user} damage!")
+
+            # Check if the Player is defeated
+            if player_instance.health <= 0:
+                print("\nYou have been defeated!")
+                print('Bloody and weary, you return to town.')
+                player_instance.position = (4,5)
+                break
+                
+        elif action == 2:  # Use an Item
+            item_to_use = None
+            if player_instance.inventory:  # Check if inventory is not empty
+                print("Inventory:")
+                for item, quantity in player_instance.inventory.items():
+                    print(f"{item}: {quantity}")
+                item_to_use = input("Choose an item to use: ").strip().title()
+
+                if item_to_use in player_instance.inventory:
+                    if item_to_use == "Bomb":  # Bomb exception logic
+                        monster.health = 0  # OHKO the monster
+                        player_instance.gold += monster.gold
+                        player_instance.experience += monster.experience
+                        player_instance.remove_from_inventory(item_to_use, 1)
+                        print(f"You used {item_to_use}. The {monster.name} is obliterated!")
+                        print(f'Only a crater remains.')
+                        break
+                    else:
+                        player_instance.heal(item_to_use) # use item for healing
+                else:
+                    print('That item is not found in your inventory.')
+
+                # Check if the item quantity reaches 0
+                if player_instance.inventory.get(item_to_use, 0) == 0:
+                    print(f"You have no more {item_to_use}s left.")
+                continue
+                
+        elif action == 3:  # Flee option #avoids infinite monster loop
+            print(f"\nYou ran away from the {monster.name}.")
+            player_instance.move('down')
+            break
+    
+def display_fight_statistics(player_instance, monster): # Displays user and monster HP at start of fight.
+    print(f"Your HP: {player_instance.health}")
+    print(f"{monster.name} HP: { monster.health}")
+
+def get_user_fight_options(): # Combat menu with three options. Validates input within function.
+    print('\nWhat would you like to do?')
+    print('1) Attack')
+    print('2) Item')
+    print('3) Run away')
+    choice = input('Choose an option (1 - 3): ').strip()
+    while choice not in ['1', '2', '3']:
+        choice = input("Invalid choice. Please select 1, 2 or 3: ").strip()
+    return int(choice)
+
+def combat_item_menu(item, player_instance):
     print(f"\nWhat would you like to do with {item}?")
     print("1) Equip Item")
     print("2) Use Item")
@@ -27,142 +112,12 @@ def combatItemMenu(item, player_stats):
         action = input("Invalid choice. Please select 1, 2, or 3: ").strip()
 
     if action == '1':  # Equip Item
-        gameUserInventory.equipItem(item)
+        player_instance.equipItem(item)
+        
     elif action == '2':  # Use Item
-        player_stats['health'] = useItemInCombat(item, player_stats['health'])  # Update player_stats['health']
-        return player_stats['health']
+        player_instance.heal(item) # Update Player health
+        
     elif action == '3':  # Return
-        return player_stats['health']  # Return updated player_stats['health']
-    return player_stats['health']  # Ensure updated HP is returned
+        print('Returning to combat')
     
-
-def useItemInCombat(item, player_stats, monster):
-    # Check if the item exists in inventory and is usable
-    if item in player_stats['inventory'] and player_stats['inventory'][item] > 0:
-        if shop_item_descriptions[item][1] == 'Consumable':
-            if item == 'Bomb':  # Special case for "Bomb"
-                print(f"You used {item}. The {monster.name} is obliterated! Nothing remains...")
-                player_stats['inventory'][item] -= 1  # Reduce bomb quantity
-                monster.health = 0  # Instantly defeat the monster
-                
-                # Grant gold and experience
-                player_stats['gold'] +=monster.gold
-                print(f"You loot {monster['gold']} gold coins!")
-                player_stats['experience'] += monster.get('experience', 0)
-                print(f"You gain {monster.experience} experience!")
-                return player_stats, monster
-            
-            elif item in healing_amount:  # Healing item
-                player_stats['health'] += healing_amount[item]
-                player_stats['health'] = min(player_stats['health'], 50)  # Cap HP at max
-                print(f"Your HP is now {player_stats['health']}.")
-                player_stats['inventory'][item] -= 1  # Reduce item quantity
-        else:
-            print(f"{item} is not a usable item.")
-    else:
-        print(f"You don't have any {item}(s) to use.")
-    return player_stats, monster
-
-def displayFightStatistics(player_stats, monster): # Displays user and monster HP at start of fight.
-    health = player_stats['health']
-    print(f"Your HP: {player_stats['health']}")
-    print(f"{monster.name} HP: { monster.health}")
-
-def getUserFightOptions(): # Combat menu with three options. Validates input within function.
-    print('\nWhat would you like to do?')
-    print('1) Attack')
-    print('2) Item')
-    print('3) Run away')
-    choice = input('Choose an option (1 - 3): ').strip()
-    while choice not in ['1', '2', '3']:
-        choice = input("Invalid choice. Please select 1, 2 or 3: ").strip()
-    return int(choice)
-
-def fightMonster(player_stats, monster): 
-    print(f"A wild {monster.name} appears!\n")
- 
-    while  monster.health > 0 and player_stats['health'] > 0: 
-        displayFightStatistics(player_stats, monster)  # Display health
-        action = getUserFightOptions()  # Get user's choice
-
-        if action == 1:  # Attack option
-            # User attacks monster
-            equipped_item = player_stats['equipment'].get('hand')  # Replace with your inventory logic
-            if equipped_item:  # Ensure there’s something equipped
-                item_attack_stat = item_combat_stats.get(equipped_item, [0])[0]  # Fetch attack stats for equipped item
-            else:
-                item_attack_stat = 0 
-            damage_to_monster = random.randint(10, 20) + item_attack_stat
-            monster.health -= damage_to_monster
-            print(f"\nYou deal {damage_to_monster} damage to the {monster.name}!")
-            
-            # Check if monster is defeated
-            if  monster.health <= 0:
-                # First retrieve the current gold value, modify it, then reassign
-                player_stats['gold'] = player_stats.get('gold', 0) + monster.gold
-                player_stats['experience'] += monster.experience
-                
-                print(f"\nYou defeated the {monster.name}!")
-                print(f"You loot {monster.gold} gold coins!")
-                print(f"You gain {monster.experience} experience!")
-                break
-            
-            # Monster attacks user
-            equipped_item = player_stats['equipment'].get('off hand')  # Replace with your inventory logic
-            if equipped_item:  # Ensure there’s something equipped
-                item_defense_stat = item_combat_stats.get(equipped_item, [0])[0]  # Fetch attack stats for equipped item
-            else:
-                item_defense_stat = 0
-            damage_to_user = (random.randint(monster.power - 5, monster.power)) - (player_stats['defense'] + item_defense_stat)
-            if damage_to_user <=0:
-                damage_to_user = 0
-            player_stats['health'] -= damage_to_user
-            print(f"The {monster.name} attacks you for {damage_to_user} damage!")
-
-            # Check if the player is defeated
-            if player_stats['health'] <= 0:
-                print("\nYou have been defeated!")
-                print('Bloody and weary, you return to town.')
-                player_stats['position'] = (4,5)
-                return player_stats
-                
-
-        elif action == 2:  # Use an Item
-            if player_stats['inventory']:  # Check if inventory is not empty
-                print("Inventory:")
-                for item, quantity in player_stats['inventory'].items():
-                    print(f"{item}: {quantity}")
-                item_to_use = input("Choose an item to use: ").strip().title()
-                if item_to_use in player_stats['inventory']:
-                    quantity = player_stats['inventory'][item_to_use]
-                    if quantity > 0:
-                        print(f"You use {item_to_use}.")
-
-                        player_stats, monster = useItemInCombat(item_to_use, player_stats, monster)  # Update stats
-                        if player_stats['inventory'][item_to_use] == 0:
-                            print(f'You have no more {item_to_use} left.')
-                if  monster.health <= 0:  # Check if monster is killed by an item
-                    break
-            else:
-                print("Your inventory is empty. Returning to combat...")
-                
-        elif action == 3:  # Flee option #avoids infinite monster loop
-            print(f"\nYou ran away from the {monster.name}.")
-            flee_x, flee_y = player_stats["position"]
-
-            if flee_x > 0:  # If possible, move left
-                flee_x -= 1
-            elif flee_x < MapWidth - 1:  # Otherwise, move right
-                flee_x += 1
-            elif flee_y > 0:  # Move up if left/right isn’t possible
-                flee_y -= 1
-            elif flee_y < MapHeight - 1:  # Move down if needed
-                flee_y += 1
-
-            player_stats["position"] = (flee_x, flee_y)
-            break
-    return player_stats
-
-    player_x, player_y = player_stats["position"]
-    gameExplore.explore_map(player_x, player_y, player_stats)
-
+    return player_instance.health  # Ensure updated HP is returned
