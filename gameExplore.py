@@ -1,44 +1,55 @@
 import pygame
 import gameCombatLoop
 from wanderingMonster import WanderingMonster
-from gameData import game_map                   #<<<< I know this is a lot, but it's better then 
-from gameData import player_stats           #<<<< module dependencies and allows each module to call upon a set of data. 
-from gameData import tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y
+from gameData import game_map, tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y, Player
 
-monsters = WanderingMonster.generate_initial_monsters() #******
+monsters = WanderingMonster.generate_initial_monsters()
+player_move_counter = 0  # Initialize steps
 
-#player initialization:
-player_move_counter = 0 #initialize steps
-player_x, player_y = player_stats.get('position', (4,5))
-player_rect = pygame.Rect(player_x * tileSize, player_y * tileSize, tileSize, tileSize)
-
-def draw_map(screen, game_map):
+def draw_map(screen, game_map, player_instance, monsters):
+    # Draw the map
     for row in range(MapHeight):
         for col in range(MapWidth):
             tile = game_map[row][col]
             pygame.draw.rect(screen, colors[tile], pygame.Rect(col * tileSize, row * tileSize, tileSize, tileSize))
+            
+    # Draw the Player
+    try:
+        player_image = pygame.image.load("assets/sprite_character.png")
 
-def explore_map(player_x, player_y, player_stats, monsters, player_move_counter):
-    pygame.init() #initialize game
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT)) #screen size
-    clock = pygame.time.Clock() 
-    player_stats['position'] = (player_x, player_y)
-    left_town = False #doesnt immediately break loop if player starts on town square
+        if player_image:
+            screen.blit(player_image, (player_instance.position[0]* tileSize, player_instance.position[1]*tileSize))
+        else:
+            pygame.draw.rect(screen, (209, 237, 242), pygame.Rect(player_instance.position[0] * tileSize, player_instance.position[1] * tileSize, tileSize, tileSize))
+
+    # Draw monsters
+        for monster in monsters:
+            #print(f"Monster: {monster.name}, Type: {monster.monster_type}, Image: {monster.image}") debugging
+
+            if monster.image:
+                screen.blit(monster.image, (monster.x *tileSize, monster.y* tileSize))
+            else:
+                pygame.draw.circle(screen, monster.color, (monster.x * tileSize + 16, monster.y * tileSize + 16), 16)
+    except FileNotFoundError:
+        print("Image file not found. Defaulting to simple shapes.")
+        player_image = None
+        monster_image = None
+
+def explore_map(player_instance, monsters, player_move_counter):
+    pygame.init()  # Initialize game
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # Screen size
+    clock = pygame.time.Clock()
+
+    left_town = False  # Player needs to leave town once to trigger return logic
     movement_cooldown = 1.5
-    move_timer = movement_cooldown 
-    
+    move_timer = movement_cooldown
+
     running = True
     while running:
-        screen.fill((0,0,0)) # colors frame black, "erasing" blur
-        draw_map(screen, game_map)  # render map
-    
-        #draw objects
-        pygame.draw.circle(screen, (0, 200, 0), (town_x * tileSize + 16, town_y * tileSize + 16), 16) #draws town "green"
-        pygame.draw.rect(screen, (209, 237, 242), player_rect) # draws player "pale blue"
-        for monster in monsters: #draws monsters based on RGB values
-            pygame.draw.circle(screen, monster.color, (monster.x * tileSize + 16, monster.y * tileSize + 16), 16)
-        
-        #event handling
+        screen.fill((0, 0, 0))  # Colors frame black, "erasing" blur
+        draw_map(screen, game_map, player_instance, monsters)  # Render map
+
+        # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -47,55 +58,52 @@ def explore_map(player_x, player_y, player_stats, monsters, player_move_counter)
                     running = False
 
         key = pygame.key.get_pressed()
-        prev_x, prev_y = player_x, player_y  
 
-        #arrow directions and handling
+        # Handle movement with cooldown
         if move_timer <= 0:
-            moved = False # unlike with static monster iteration, the loop was continous
-                            #flag manages to track player movement
-            if key[pygame.K_UP] and player_y > 0:
-                player_y -= 1
+            moved = False  # Track Player movement 
+            if key[pygame.K_UP]:
+                player_instance.move('up')
                 moved = True
-            if key[pygame.K_DOWN] and player_y < MapHeight - 1:
-                player_y += 1
+            elif key[pygame.K_DOWN]:
+                player_instance.move('down')
                 moved = True
-            elif key[pygame.K_LEFT] and player_x > 0:
-                player_x -= 1
+            elif key[pygame.K_LEFT]:
+                player_instance.move('left')
                 moved = True
-            elif key[pygame.K_RIGHT] and player_x < MapWidth - 1:
-                player_x += 1
+            elif key[pygame.K_RIGHT]:
+                player_instance.move('right')
                 moved = True
+
             if moved:
                 move_timer = movement_cooldown
                 player_move_counter += 1
 
-                if player_move_counter % 2 == 0: #monster moves every two player moves
+                # Monster movement every two Player moves
+                if player_move_counter % 2 == 0:
                     for monster in monsters:
                         monster.move()
-                if player_move_counter % 5 == 0 and len(monsters) <= 1:  #every 5 moves if there's less than one monster, a monster respawns on map
+
+                # Respawn monsters when none are left
+                if len(monsters) == 0:
                     monsters.extend(WanderingMonster.generate_initial_monsters())
         else:
             move_timer -= 1
-            
-        #updates player position
-        player_rect.topleft = (player_x * tileSize, player_y * tileSize)
-        player_stats['position'] = (player_x, player_y)  
 
-        if (player_x, player_y) != (town_x, town_y):
+        # Town logic
+        if player_instance.position != (town_x, town_y):
             left_town = True
 
-        # Town return logic
-        if player_x == town_x and player_y == town_y:
-            if left_town:  # Only exit if player has left town at least once
-                print("Returning to town menu...")
-                running = False
+        if player_instance.position == (town_x, town_y) and left_town:
+            print("Returning to town menu...")
+            running = False
 
-        #monster encounter
+        # Monster encounter
         for monster in monsters[:]:
-            if (player_x, player_y) == (monster.x, monster.y):
-                print('A branch snaps nearby!')
-                player_stats = gameCombatLoop.fightMonster(player_stats, monster)
-                monsters.remove(monster)  
+            if player_instance.position == (monster.x, monster.y):
+                print("A branch snaps nearby!")
+                gameCombatLoop.fight_monster(player_instance, monster)
+                monsters.remove(monster)
 
         pygame.display.update()
         clock.tick(30)
@@ -103,6 +111,5 @@ def explore_map(player_x, player_y, player_stats, monsters, player_move_counter)
 
 
 if __name__ == '__main__':
-
-    explore_map(player_x, player_y, player_stats, monsters, player_move_counter)
-   
+    # Assuming Player is initialized elsewhere and passed here
+    explore_map(player_instance, monsters, player_move_counter)
