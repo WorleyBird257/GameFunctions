@@ -12,7 +12,7 @@ Functions:
 '''
 import random, gameUserInventory, game
 from wanderingMonster import WanderingMonster
-from gameData import shop_item_descriptions, healing_amount, item_combat_stats, Player
+from gameData import shop_item_descriptions
 from gameData import tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y
 
 def fight_monster(player_instance, monster): 
@@ -23,14 +23,20 @@ def fight_monster(player_instance, monster):
         action = get_user_fight_options()  # Get user's choice
 
         if action == 1:  # Attack option
-            # player_instance attacks monster
-            equipped_weapon = player_instance.equipment.get('hand')  # checks weapon stat
-            item_attack_stat = item_combat_stats.get(equipped_weapon, [0])[0] if equipped_weapon else 0  # Fetch attack stats for equipped item
+            
+            # Step 1: Player attacks monster
+            equipped_weapon = player_instance.equipment.get('hand') #retrieve weapon based on euipment slot
+            if equipped_weapon: #checks equipped status
+                player_instance.reduce_durability(equipped_weapon)  # Reduce weapon durability
+                
+            weapon_stats = shop_item_descriptions.get(equipped_weapon, {}).get("Combat stats", {})
+            item_attack_stat = weapon_stats.get("Attack", 0) if equipped_weapon else 0  
+
             damage_to_monster = random.randint(10, 20) + item_attack_stat
             monster.health -= damage_to_monster
             print(f"\nYou deal {damage_to_monster} damage to the {monster.name}!")
-            
-            # Check if monster is defeated
+
+            # 1b: Check if monster is defeated
             if  monster.health <= 0:
                 player_instance.gold += monster.gold
                 player_instance.experience += monster.experience
@@ -39,16 +45,21 @@ def fight_monster(player_instance, monster):
                 print(f"You gain {monster.experience} experience!")
                 break
             
-            # Monster attacks user
-            equipped_shield = player_instance.equipment.get('off hand')  # check shield stat
-            item_defense_stat = item_combat_stats.get(equipped_shield, [1])[0] if equipped_shield else 0 # Fetch defense stats for equipped item
+            # Step 2: Monster attacks user
+            equipped_shield = player_instance.equipment.get('off hand') #gets weapon based on slot
+            if equipped_shield: #checks equip status
+                player_instance.reduce_durability(equipped_shield)  # Reduce shield durability
+                
+            shield_stats = shop_item_descriptions.get(equipped_shield, {}).get("Combat stats", {})
+            item_defense_stat = shield_stats.get("Defense", 0) if equipped_shield else 0  
+
             damage_to_user = (random.randint(monster.power - 5, monster.power)) - (player_instance.defense + item_defense_stat)
-            if damage_to_user <= 0: #prevents monster from dealing negative damage
-                damage_to_user = 0
+            damage_to_user = max(damage_to_user, 0)  # Prevent negative damage
+
             player_instance.health -= damage_to_user
             print(f"The {monster.name} attacks you for {damage_to_user} damage!")
 
-            # Check if the Player is defeated
+            # 2b: Check if the Player is defeated
             if player_instance.health <= 0:
                 print("\nYou have been defeated!")
                 print('Bloody and weary, you return to town.')
@@ -64,6 +75,9 @@ def fight_monster(player_instance, monster):
                 item_to_use = input("Choose an item to use: ").strip().title()
 
                 if item_to_use in player_instance.inventory:
+                    item_data = shop_item_descriptions.get(item_to_use, {})
+                    heal_amount = item_data.get("Effect", 0)
+
                     if item_to_use == "Bomb":  # Bomb exception logic
                         monster.health = 0  # OHKO the monster
                         player_instance.gold += monster.gold
@@ -121,3 +135,4 @@ def combat_item_menu(item, player_instance):
         print('Returning to combat')
     
     return player_instance.health  # Ensure updated HP is returned
+    
