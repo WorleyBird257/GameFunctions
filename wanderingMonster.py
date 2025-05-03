@@ -40,8 +40,8 @@ class WanderingMonster:
         self.experience = self.random_stat(*self.monster_values_dict[name]['experience'])
 
         self.monster_type = monster_type #added so I can have pictures
-        self.image = self.get_monster_image()
-        
+
+        self.image = self.get_monster_image()  # Load image once and store it ******
         # Assign a random starting position (not in town)
         self.x = x if x is not None else random.randint(0, MapWidth - 1)
         self.y = y if y is not None else random.randint(0, MapHeight - 1)
@@ -53,6 +53,8 @@ class WanderingMonster:
             
     def get_monster_image(self):
         try:
+            #print(f"Loading image for {self.name}")  # Debugging line to check load frequency
+
             if self.monster_type == 'Bat':
                 return pygame.image.load("assets/sprite_bat.png")
             elif self.monster_type == 'Goblin':
@@ -65,10 +67,22 @@ class WanderingMonster:
                 return pygame.image.load("assets/sprite_zombie.png")
             else:
                 return None
-        except FileNotFoundError:
-            print(f'image for {self.monster_type} not found. Using fallback')
-            return None
-               
+        except pygame.error:
+            print(f"Image for {self.monster_type} not found. Using fallback.")
+            placeholder = pygame.Surface((tileSize, tileSize))
+            placeholder.fill(self.color)  # Uses monster's assigned color
+            return placeholder  # Ensures every monster has an image
+        
+    def draw(self, screen):
+        """Handles rendering the monster."""
+        try:
+            if self.image:
+                screen.blit(self.image, (self.x * tileSize, self.y * tileSize))
+            else:
+                pygame.draw.circle(screen, self.color, (self.x * tileSize + 16, self.y * tileSize + 16), 16)  # Placeholder
+        except pygame.error:
+            print(f"Image file not found for {self.name}. Defaulting to shapes.")
+            
     def move(self):
         """Moves the monster in a random direction, ensuring it stays within grid bounds."""
         while True:  # Loop until a valid move is found
@@ -99,7 +113,7 @@ class WanderingMonster:
         monster_types = ['Bat', 'Goblin', 'Skeleton', 'Wolf', 'Draugr']  # Define types
         monsters = []
 
-        for _ in range(count):  # Generate monsters
+        for _ in range(count):  # Generate 5 monsters
             name = random.choice(monster_types)
             x = random.randint(0, MapWidth - 1)
             y = random.randint(0, MapHeight - 1)
