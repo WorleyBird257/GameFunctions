@@ -2,7 +2,7 @@
 Functions for checking, adding, removing items included.
 Additional functionality for managing inventory.
 '''
-from gameData import shop_item_descriptions, healing_amount, item_combat_stats
+from gameData import shop_item_descriptions
 
 
 def item_menu(item, player_instance):
@@ -30,13 +30,19 @@ def check_inventory(player_instance):
     print('\nYour Inventory:')
     if player_instance.inventory:  # Check if inventory is not empty
         for item, quantity in player_instance.inventory.items():
-            print(f'{item}: {quantity}')
+            item_data = shop_item_descriptions.get(item, {})
+            durability = item_data.get("Durability", "N/A")
+            description = item_data.get("Description", "No description available")
+            print(f'{item}: Quantity {quantity}, Durability: {durability}\n{description}\n')
+        
         selected_item = input("Select an item. Type 'exit' to quit.\n ").strip().title()
-
+        
         if selected_item.lower() == 'exit':  # Option to exit the inventory check
             return
+        
+        selected_item = selected_item.title()  # Ensure proper formatting
+        
         if selected_item in player_instance.inventory:
-            #print(f'{shop_item_descriptions[item][]}')
             item_menu(selected_item, player_instance)  # Calls a function to handle item actions
         else:
             print("That item is not in your inventory.")
