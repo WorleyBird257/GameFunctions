@@ -1,9 +1,8 @@
 '''Opens the Adventure Game.
-Updated: 4/30/25
+Updated: 5/3/25
 Draws data from gameData to resolve module dependencies.
 Able to save game!
-There's graphics and monsters that move!
-
+There's graphics and monsters that move! and they should render!? or at least not refresh a million times with an error. or handle it better. 
 Includes:
 combatLoop with usable items for combat and healing and random monster generation.
     -items can only be equipped outside of combat. hidden durability stat not implemented.
@@ -16,6 +15,7 @@ import gameCombatLoop
 import gamePurchaseMenu
 import gameUserInventory
 import gameExplore
+import pygame
 from gameData import game_map, tileSize, MapHeight, MapWidth, SCREEN_WIDTH, SCREEN_HEIGHT, colors, town_x, town_y, Player
 from wanderingMonster import WanderingMonster  
 
@@ -43,7 +43,19 @@ def openGameMenu(player_instance, game_map):
             
         elif action == 2: #shop
             print('You head towards the center of town. Markets line the square')
-            gamePurchaseMenu.game_shop_loop(player_instance)
+            print('Where do you want to go?')
+            print('1) Griz Market')
+            print('2) Blacksmith')
+            print('3) Return')
+            choice = input('Choose an option: (1-3):')
+            while choice not in ['1', '2', '3']:
+                choice = input("Invalid choice. Please select 1 or 2: ").strip()
+            if choice == '1':
+                gamePurchaseMenu.game_shop_loop(player_instance)
+            elif choice == '2':
+                gamePurchaseMenu.game_blacksmith_loop(player_instance)
+            elif choice == '3':
+                openGameMenu(player_instance, game_map)
             
         elif action == 3: #check inventory
             gameUserInventory.check_inventory(player_instance)
