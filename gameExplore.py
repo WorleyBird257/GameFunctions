@@ -12,29 +12,12 @@ def draw_map(screen, game_map, player_instance, monsters):
         for col in range(MapWidth):
             tile = game_map[row][col]
             pygame.draw.rect(screen, colors[tile], pygame.Rect(col * tileSize, row * tileSize, tileSize, tileSize))
-            
-    # Draw the Player
-    try:
-        player_image = pygame.image.load("assets/sprite_character.png")
 
-        if player_image:
-            screen.blit(player_image, (player_instance.position[0]* tileSize, player_instance.position[1]*tileSize))
-        else:
-            pygame.draw.rect(screen, (209, 237, 242), pygame.Rect(player_instance.position[0] * tileSize, player_instance.position[1] * tileSize, tileSize, tileSize))
+    screen.blit(player_instance.image, (player_instance.position[0] * tileSize, player_instance.position[1] * tileSize))    # Draw monsters
 
-    # Draw monsters
-        for monster in monsters:
-            #print(f"Monster: {monster.name}, Type: {monster.monster_type}, Image: {monster.image}") debugging
-
-            if monster.image:
-                screen.blit(monster.image, (monster.x *tileSize, monster.y* tileSize))
-            else:
-                pygame.draw.circle(screen, monster.color, (monster.x * tileSize + 16, monster.y * tileSize + 16), 16)
-    except FileNotFoundError:
-        print("Image file not found. Defaulting to simple shapes.")
-        player_image = None
-        monster_image = None
-
+    for monster in monsters:
+        monster.draw(screen)  # Each monster now handles its own rendering
+    
 def explore_map(player_instance, monsters, player_move_counter):
     pygame.init()  # Initialize game
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # Screen size
@@ -105,7 +88,7 @@ def explore_map(player_instance, monsters, player_move_counter):
                 gameCombatLoop.fight_monster(player_instance, monster)
                 monsters.remove(monster)
 
-        pygame.display.update()
+        pygame.display.flip()
         clock.tick(30)
     pygame.quit()
 
