@@ -213,6 +213,10 @@ class Player:
     def load_player_image(self):
         try:
             return pygame.image.load("assets/sprite_character.png")
+        except FileNotFoundError:
+            print("FileNotFoundError: Player sprite not found. Using placeholder.")
+            player_image = pygame.Surface((tileSize, tileSize))
+            player_image.fill((209, 237, 242))
         except pygame.error:
             print("Player sprite not found, using placeholder.")
             placeholder = pygame.Surface((tileSize, tileSize))
