@@ -67,6 +67,11 @@ class WanderingMonster:
                 return pygame.image.load("assets/sprite_zombie.png")
             else:
                 return None
+        except FileNotFoundError:
+            print(f"FileNotFoundError: Image for {self.name} not found. Using fallback.")
+            placeholder = pygame.Surface((tileSize, tileSize))
+            placeholder.fill(self.color)  # Uses monster's assigned color
+            return placeholder
         except pygame.error:
             print(f"Image for {self.monster_type} not found. Using fallback.")
             placeholder = pygame.Surface((tileSize, tileSize))
